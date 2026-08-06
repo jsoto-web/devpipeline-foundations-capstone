@@ -1,0 +1,13 @@
+
+
+
+# Diagram
+*.drawio
+*.drawio.bkp
+
+# python
+__pycache__/
+*.pyc
+
+# database
+*.db
