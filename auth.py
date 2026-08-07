@@ -28,3 +28,31 @@ def verify_password(plain_password: str, stored_password: str) -> bool:
     except ValueError:
         # stored password isn't a valid bcrypt hash (e.g. corrupted data)
         return False
+
+def create_user(
+    conn: sqlite3.Connection,
+    first_name: str,
+    last_name: str,
+    phone: str,
+    email: str,
+    plain_password: str,
+    hire_date: str,
+    user_type: str,
+) -> int:
+    """Insert a new user with a securely hashed password.
+    Returns the new user_id. Raises sqlite3.IntegrityError if the
+    email is already taken (email is UNIQUE in the schema)."""
+    hashed = hash_password(plain_password)
+    today = date.today().isoformat()
+
+    cursor = conn.execute(
+        """
+        INSERT INTO users
+            (first_name, last_name, phone, email, password,
+             active, date_created, hire_date, user_type)
+        VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)
+        """,
+        (first_name, last_name, phone, email, hashed, today, hire_date, user_type),
+    )
+    conn.commit()
+    return cursor.lastrowid
