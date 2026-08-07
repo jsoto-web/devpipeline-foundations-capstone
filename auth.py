@@ -73,3 +73,37 @@ def authenticate(conn: sqlite3.Connection, email: str, plain_password: str):
         return None
 
     return row
+
+if __name__ == "__main__":
+    # Quick manual test / demo. Run: pipenv run python auth.py
+    conn = get_connection()
+
+    test_email = "demo.manager@example.com"
+    existing = conn.execute(
+        "SELECT * FROM users WHERE email = ?", (test_email,)
+    ).fetchone()
+
+    if existing is None:
+        user_id = create_user(
+            conn,
+            first_name="Demo",
+            last_name="Manager",
+            phone="555-0100",
+            email=test_email,
+            plain_password="CorrectHorseBatteryStaple",
+            hire_date="2026-01-15",
+            user_type="manager",
+        )
+        print(f"Created test user with user_id={user_id}")
+    else:
+        print("Test user already exists, skipping creation.")
+
+    result = authenticate(conn, test_email, "wrong-password")
+    print("Login with wrong password:", "SUCCESS" if result else "REJECTED (expected)")
+
+    result = authenticate(conn, test_email, "CorrectHorseBatteryStaple")
+    print("Login with correct password:", "SUCCESS" if result else "REJECTED (unexpected!)")
+    if result:
+        print(f"  Logged in as: {result['first_name']} {result['last_name']} ({result['user_type']})")
+
+    conn.close()
