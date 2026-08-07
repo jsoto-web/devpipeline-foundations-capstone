@@ -14,3 +14,9 @@ import bcrypt
 
 from db import get_connection
 
+def hash_password(plain_password: str) -> str:
+    '''Hash a plain-text password with bcrypt. Returns the hash as a string
+    (safe to store directly in the users.password TEXT column).
+    '''
+    hashed_bytes = bcrypt.hashpw(plain_password.encode("utf-8"), bcrypt.gensalt())
+    return hashed_bytes.decode("utf-8")
