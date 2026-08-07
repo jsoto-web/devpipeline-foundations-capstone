@@ -56,3 +56,20 @@ def create_user(
     )
     conn.commit()
     return cursor.lastrowid
+
+def authenticate(conn: sqlite3.Connection, email: str, plain_password: str):
+    """Attempt to log in. Returns the user row (sqlite3.Row) on success,
+    or None if the email doesn't exist, the account is inactive, or the
+    password is wrong."""
+    row = conn.execute(
+        "SELECT * FROM users WHERE email = ?", (email,)
+    ).fetchone()
+
+    if row is None:
+        return None
+    if row["active"] != 1:
+        return None
+    if not verify_password(plain_password, row["password"]):
+        return None
+
+    return row
