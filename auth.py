@@ -20,3 +20,11 @@ def hash_password(plain_password: str) -> str:
     '''
     hashed_bytes = bcrypt.hashpw(plain_password.encode("utf-8"), bcrypt.gensalt())
     return hashed_bytes.decode("utf-8")
+
+def verify_password(plain_password: str, stored_password: str) -> bool:
+    '''check a plain-text password attempt against the stored bcrypt hash.'''
+    try:
+        return bcrypt.checkpw(plain_password.encode("utf-8"), stored_password.encode("utf-8"))
+    except ValueError:
+        # stored password isn't a valid bcrypt hash (e.g. corrupted data)
+        return False
