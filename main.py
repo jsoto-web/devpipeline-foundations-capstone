@@ -105,3 +105,65 @@ def user_menu(conn, user):
         elif choice == "4":
             print("Logging out...")
             return
+
+
+ 
+# ---------------------------------------------------------------------------
+# Manager-only features
+# ---------------------------------------------------------------------------
+ 
+def view_all_users(conn, user):
+    print("\n--- All Users ---")
+    rows = conn.execute(
+        "SELECT user_id, first_name, last_name, email, user_type, active "
+        "FROM users ORDER BY last_name, first_name"
+    ).fetchall()
+ 
+    if not rows:
+        print("No users found.")
+        return
+ 
+    for row in rows:
+        status = "active" if row["active"] else "inactive"
+        print(f"  [{row['user_id']}] {row['first_name']} {row['last_name']} "
+              f"<{row['email']}> - {row['user_type']} ({status})")
+ 
+ 
+def search_users(conn, user):
+    print("\n--- Search Users ---")
+    term = prompt("Search by first or last name")
+    like_term = f"%{term}%"
+    rows = conn.execute(
+        "SELECT user_id, first_name, last_name, email, user_type, active "
+        "FROM users WHERE first_name LIKE ? OR last_name LIKE ? "
+        "ORDER BY last_name, first_name",
+        (like_term, like_term),
+    ).fetchall()
+ 
+    if not rows:
+        print("No matching users.")
+        return
+ 
+    for row in rows:
+        status = "active" if row["active"] else "inactive"
+        print(f"  [{row['user_id']}] {row['first_name']} {row['last_name']} "
+              f"<{row['email']}> - {row['user_type']} ({status})")
+ 
+ 
+def add_user(conn, user):
+    print("\n--- Add User ---")
+    first_name = prompt("First name")
+    last_name = prompt("Last name")
+    phone = prompt("Phone")
+    email = prompt("Email")
+    password = prompt("Temporary password")
+    hire_date = prompt("Hire date (YYYY-MM-DD)")
+    user_type = prompt_choice("User type (user/manager)", {"user", "manager"})
+ 
+    try:
+        new_id = create_user(
+            conn, first_name, last_name, phone, email, password, hire_date, user_type
+        )
+        print(f"Created user_id={new_id}.")
+    except Exception as e:
+        print(f"Could not create user: {e}")
