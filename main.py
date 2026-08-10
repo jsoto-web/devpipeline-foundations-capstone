@@ -85,3 +85,23 @@ def change_own_password(conn, user):
     )
     conn.commit()
     print("Password updated.")
+
+ 
+def user_menu(conn, user):
+    while True:
+        print("\n--- User Menu ---")
+        print("1) View my profile")
+        print("2) Change my password")
+        print("3) View my competency summary")
+        print("4) Log out")
+        choice = prompt_choice("Choose an option", {"1", "2", "3", "4"})
+ 
+        if choice == "1":
+            view_own_profile(conn, user)
+        elif choice == "2":
+            change_own_password(conn, user)
+        elif choice == "3":
+            view_own_competency_summary(conn, user)
+        elif choice == "4":
+            print("Logging out...")
+            return
