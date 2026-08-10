@@ -11,6 +11,20 @@ menu based on users.user_type.
 from db import get_connection
 from auth import authenticate, create_user, hash_password
 
+# ---------------------------------------------------------------------------
+# Small input helpers
+# ---------------------------------------------------------------------------
+ 
+def prompt(label: str) -> str:
+    return input(f"{label}: ").strip()
+ 
+ 
+def prompt_choice(label: str, valid_choices) -> str:
+    while True:
+        choice = prompt(label)
+        if choice in valid_choices:
+            return choice
+        print(f"  Please enter one of: {', '.join(valid_choices)}")
 
  
 # ---------------------------------------------------------------------------
