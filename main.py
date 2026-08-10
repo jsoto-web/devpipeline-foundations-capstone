@@ -53,3 +53,35 @@ def login_screen(conn):
  
         print(f"\nWelcome, {user['first_name']} {user['last_name']}!")
         return user
+
+
+# ---------------------------------------------------------------------------
+# Shared / "user" features -- both user_type='user' and 'manager' can do these
+# ---------------------------------------------------------------------------
+ 
+def view_own_profile(conn, user):
+    print("\n--- Your Profile ---")
+    print(f"Name:        {user['first_name']} {user['last_name']}")
+    print(f"Email:       {user['email']}")
+    print(f"Phone:       {user['phone']}")
+    print(f"User type:   {user['user_type']}")
+    print(f"Hire date:   {user['hire_date']}")
+    print(f"Active:      {'Yes' if user['active'] else 'No'}")
+ 
+ 
+def change_own_password(conn, user):
+    print("\n--- Change Password ---")
+    new_password = prompt("New password")
+    confirm = prompt("Confirm new password")
+ 
+    if new_password != confirm:
+        print("Passwords don't match. Nothing was changed.")
+        return
+ 
+    hashed = hash_password(new_password)
+    conn.execute(
+        "UPDATE users SET password = ? WHERE user_id = ?",
+        (hashed, user["user_id"]),
+    )
+    conn.commit()
+    print("Password updated.")
