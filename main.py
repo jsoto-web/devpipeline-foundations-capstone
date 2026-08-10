@@ -167,3 +167,81 @@ def add_user(conn, user):
         print(f"Created user_id={new_id}.")
     except Exception as e:
         print(f"Could not create user: {e}")
+
+
+ 
+def manager_menu(conn, user):
+    while True:
+        print("\n--- Manager Menu ---")
+        print("1) View my profile")
+        print("2) Change my password")
+        print("3) View all users")
+        print("4) Search users")
+        print("5) Add a user")
+        print("6) View a user's competency report")
+        print("7) Manage competencies")
+        print("8) Manage assessments")
+        print("9) Manage assessment results")
+        print("10) View competency results summary (all users)")
+        print("11) Export CSV")
+        print("12) Import CSV")
+        print("13) Log out")
+ 
+        choice = prompt_choice(
+            "Choose an option",
+            {str(n) for n in range(1, 14)},
+        )
+ 
+        if choice == "1":
+            view_own_profile(conn, user)
+        elif choice == "2":
+            change_own_password(conn, user)
+        elif choice == "3":
+            view_all_users(conn, user)
+        elif choice == "4":
+            search_users(conn, user)
+        elif choice == "5":
+            add_user(conn, user)
+        elif choice == "6":
+            view_user_competency_report(conn, user)
+        elif choice == "7":
+            manage_competencies(conn, user)
+        elif choice == "8":
+            manage_assessments(conn, user)
+        elif choice == "9":
+            manage_assessment_results(conn, user)
+        elif choice == "10":
+            view_competency_results_summary(conn, user)
+        elif choice == "11":
+            csv_export_menu(conn, user)
+        elif choice == "12":
+            csv_import_menu(conn, user)
+        elif choice == "13":
+            print("Logging out...")
+            return
+ 
+ 
+# ---------------------------------------------------------------------------
+# App loop
+# ---------------------------------------------------------------------------
+ 
+def main():
+    conn = get_connection()
+    try:
+        while True:
+            user = login_screen(conn)
+            if user is None:
+                print("Goodbye.")
+                break
+ 
+            if user["user_type"] == "manager":
+                manager_menu(conn, user)
+            else:
+                user_menu(conn, user)
+            # loop back to login_screen after logout
+    finally:
+        conn.close()
+ 
+ 
+if __name__ == "__main__":
+    main()
