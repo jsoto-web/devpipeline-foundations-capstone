@@ -104,6 +104,33 @@ def get_latest_result(conn, user_id, competency_id):
                         """,
                         (user_id, competency_id),
     ).fetchone()
+
+
+def print_user_competency_summary(conn, target_user):
+    """The 'User Competency Summary' report for a single user: their
+    most recent score per competency (0 if never assessed), plus a
+    simple average across all competencies."""
+    print(f"\n--- Competency Summary: {target_user['first_name']} {target_user['last_name']} ---")
+    print(f"Email: {target_user['email']}")
+ 
+    competencies = list_competencies(conn)
+    if not competencies:
+        print("No competencies exist yet.")
+        return
+ 
+    total = 0
+    for c in competencies:
+        latest = get_latest_result(conn, target_user["user_id"], c["competency_id"])
+        score = latest["score"] if latest else 0
+        total += score
+        print(f"  {c['name']}: {score}")
+ 
+    average = total / len(competencies)
+    print(f"\nAverage competency score: {average:.2f}")
+
+
+def view_own_competency_summary(conn, user):
+    print_user_competency_summary(conn, user)
  
 def user_menu(conn, user):
     while True:
