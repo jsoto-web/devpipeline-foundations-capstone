@@ -11,6 +11,10 @@ menu based on users.user_type.
 from db import get_connection
 from auth import authenticate, create_user, hash_password
 
+import csv
+import sqlite3
+from datetime import date
+
 # ---------------------------------------------------------------------------
 # Small input helpers
 # ---------------------------------------------------------------------------
@@ -86,6 +90,20 @@ def change_own_password(conn, user):
     conn.commit()
     print("Password updated.")
 
+def get_latest_result(conn, user_id, competency_id):
+    """Most recent assessment_result for a given user + competency, or 
+    None if that user has never been assessed on that competency."""
+    return conn.execute(
+                        """
+                        SELECT ar.score, asmt.name AS assessment_name, ar.date_taken
+                        FROM assessment_results ar
+                        JOIN assessments asmt ON ar.assessment_id = asmt.assessment_id
+                        WHERE ar.user_id = ? AND asmt.competency_id = ?
+                        ORDER BY ar.date_taken DESC, ar.assessment_result_id DESC
+                        LIMIT 1
+                        """,
+                        (user_id, competency_id),
+    ).fetchone()
  
 def user_menu(conn, user):
     while True:
