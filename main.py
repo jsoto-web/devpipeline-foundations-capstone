@@ -213,6 +213,54 @@ def add_user(conn, user):
     except Exception as e:
         print(f"Could not create user: {e}")
 
+ 
+def view_user_competency_report(conn, user):
+    print("\n--- View a User's Competency Report ---")
+    target_user_id = choose_user(conn)
+    if target_user_id is None:
+        return
+    target_user = conn.execute(
+        "SELECT * FROM users WHERE user_id = ?", (target_user_id,)
+    ).fetchone()
+    print_user_competency_summary(conn, target_user)
+ 
+ 
+def print_competency_results_summary(conn, competency):
+    """The 'Competency Results Summary' report for a single competency:
+    every active user's most recent score on it (0 if never assessed),
+    plus a simple average across active users."""
+    print(f"\n--- Results Summary: {competency['name']} ---")
+ 
+    active_users = conn.execute(
+        "SELECT * FROM users WHERE active = 1 ORDER BY last_name, first_name"
+    ).fetchall()
+    if not active_users:
+        print("No active users.")
+        return
+ 
+    total = 0
+    for u in active_users:
+        latest = get_latest_result(conn, u["user_id"], competency["competency_id"])
+        score = latest["score"] if latest else 0
+        assessment_name = latest["assessment_name"] if latest else ""
+        date_taken = latest["date_taken"] if latest else ""
+        total += score
+        print(f"  {u['first_name']} {u['last_name']}: score {score}"
+              + (f", assessment '{assessment_name}' on {date_taken}" if latest else ""))
+ 
+    average = total / len(active_users)
+    print(f"\nAverage score across active users: {average:.2f}")
+ 
+ 
+def view_competency_results_summary(conn, user):
+    print("\n--- Competency Results Summary ---")
+    competency_id = choose_competency(conn)
+    if competency_id is None:
+        return
+    competency = conn.execute(
+        "SELECT * FROM competencies WHERE competency_id = ?", (competency_id,)
+    ).fetchone()
+    print_competency_results_summary(conn, competency)
 
 # ---------------------------------------------------------------------------
 # Competencies -- view / add / edit only. The requirements only list
