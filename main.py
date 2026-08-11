@@ -169,6 +169,89 @@ def add_user(conn, user):
         print(f"Could not create user: {e}")
 
 
+# ---------------------------------------------------------------------------
+# Competencies -- view / add / edit only. The requirements only list
+# "delete an assessment result" under Delete, so competencies don't get
+# a delete option here.
+# ---------------------------------------------------------------------------
+ 
+def list_competencies(conn):
+    return conn.execute(
+        "SELECT competency_id, name, date_created FROM competencies ORDER BY name"
+    ).fetchall()
+ 
+ 
+def view_competencies(conn, user):
+    print("\n--- Competencies ---")
+    rows = list_competencies(conn)
+    if not rows:
+        print("No competencies yet.")
+        return
+    for row in rows:
+        print(f"  [{row['competency_id']}] {row['name']} (added {row['date_created']})")
+ 
+ 
+def add_competency(conn, user):
+    print("\n--- Add Competency ---")
+    name = prompt("Competency name")
+    if not name:
+        print("Name can't be blank. Nothing was added.")
+        return
+ 
+    today = date.today().isoformat()
+    cursor = conn.execute(
+        "INSERT INTO competencies (name, date_created) VALUES (?, ?)",
+        (name, today),
+    )
+    conn.commit()
+    print(f"Added competency_id={cursor.lastrowid} ({name}).")
+ 
+ 
+def edit_competency(conn, user):
+    print("\n--- Edit Competency ---")
+    view_competencies(conn, user)
+    rows = list_competencies(conn)
+    if not rows:
+        return
+ 
+    valid_ids = {str(row["competency_id"]) for row in rows}
+    competency_id = prompt_choice("Enter the competency_id to edit", valid_ids)
+ 
+    new_name = prompt("New name (leave blank to cancel)")
+    if not new_name:
+        print("No changes made.")
+        return
+ 
+    conn.execute(
+        "UPDATE competencies SET name = ? WHERE competency_id = ?",
+        (new_name, competency_id),
+    )
+    conn.commit()
+    print("Competency updated.")
+ 
+ 
+def manage_competencies(conn, user):
+    while True:
+        print("\n--- Manage Competencies ---")
+        print("1) View competencies")
+        print("2) Add a competency")
+        print("3) Edit a competency")
+        print("4) Back to manager menu")
+        choice = prompt_choice("Choose an option", {"1", "2", "3", "4"})
+ 
+        if choice == "1":
+            view_competencies(conn, user)
+        elif choice == "2":
+            add_competency(conn, user)
+        elif choice == "3":
+            edit_competency(conn, user)
+        elif choice == "4":
+            return
+
+
+#
+#
+#
  
 def manager_menu(conn, user):
     while True:
