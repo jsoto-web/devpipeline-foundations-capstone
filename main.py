@@ -282,7 +282,21 @@ def view_competencies(conn, user):
         return
     for row in rows:
         print(f"  [{row['competency_id']}] {row['name']} (added {row['date_created']})")
+
+
+def choose_competency(conn):
+    """Show competencies and prompt for a valid competency_id. Returns the
+    id as a string, or None if there are no competencies to choose from."""
+    rows = list_competencies(conn)
+    if not rows:
+        print("No competencies exist yet -- add one first.")
+        return None
  
+    for row in rows:
+        print(f"  [{row['competency_id']}] {row['name']}")
+    valid_ids = {str(row["competency_id"]) for row in rows}
+    return prompt_choice("Enter the competency_id", valid_ids)
+
  
 def add_competency(conn, user):
     print("\n--- Add Competency ---")
