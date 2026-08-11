@@ -263,6 +263,121 @@ def view_competency_results_summary(conn, user):
     print_competency_results_summary(conn, competency)
 
 # ---------------------------------------------------------------------------
+# Assessments -- view / add / edit only (same reasoning as competencies:
+# the spec's Delete list only mentions deleting an assessment result).
+# ---------------------------------------------------------------------------
+ 
+def list_assessments(conn):
+    return conn.execute(
+        """
+        SELECT a.assessment_id, a.name, a.date_created,
+               c.competency_id, c.name AS competency_name
+        FROM assessments a
+        JOIN competencies c ON a.competency_id = c.competency_id
+        ORDER BY c.name, a.name
+        """
+    ).fetchall()
+ 
+ 
+def view_assessments(conn, user):
+    print("\n--- Assessments ---")
+    rows = list_assessments(conn)
+    if not rows:
+        print("No assessments yet.")
+        return
+    for row in rows:
+        print(f"  [{row['assessment_id']}] {row['name']} "
+              f"-- competency: {row['competency_name']} (added {row['date_created']})")
+ 
+ 
+def choose_competency(conn):
+    """Show competencies and prompt for a valid competency_id. Returns the
+    id as a string, or None if there are no competencies to choose from."""
+    rows = list_competencies(conn)
+    if not rows:
+        print("No competencies exist yet -- add one first.")
+        return None
+ 
+    for row in rows:
+        print(f"  [{row['competency_id']}] {row['name']}")
+    valid_ids = {str(row["competency_id"]) for row in rows}
+    return prompt_choice("Enter the competency_id", valid_ids)
+ 
+ 
+def add_assessment(conn, user):
+    print("\n--- Add Assessment ---")
+    competency_id = choose_competency(conn)
+    if competency_id is None:
+        return
+ 
+    name = prompt("Assessment name")
+    if not name:
+        print("Name can't be blank. Nothing was added.")
+        return
+ 
+    today = date.today().isoformat()
+    cursor = conn.execute(
+        "INSERT INTO assessments (competency_id, name, date_created) VALUES (?, ?, ?)",
+        (competency_id, name, today),
+    )
+    conn.commit()
+    print(f"Added assessment_id={cursor.lastrowid} ({name}).")
+ 
+ 
+def edit_assessment(conn, user):
+    print("\n--- Edit Assessment ---")
+    view_assessments(conn, user)
+    rows = list_assessments(conn)
+    if not rows:
+        return
+ 
+    valid_ids = {str(row["assessment_id"]) for row in rows}
+    assessment_id = prompt_choice("Enter the assessment_id to edit", valid_ids)
+ 
+    print("Leave the name blank to keep it unchanged.")
+    new_name = prompt("New name")
+ 
+    new_competency_id = None
+    if prompt_choice("Change the competency? (y/n)", {"y", "n"}) == "y":
+        new_competency_id = choose_competency(conn)
+ 
+    if not new_name and new_competency_id is None:
+        print("No changes made.")
+        return
+ 
+    if new_name:
+        conn.execute(
+            "UPDATE assessments SET name = ? WHERE assessment_id = ?",
+            (new_name, assessment_id),
+        )
+    if new_competency_id is not None:
+        conn.execute(
+            "UPDATE assessments SET competency_id = ? WHERE assessment_id = ?",
+            (new_competency_id, assessment_id),
+        )
+    conn.commit()
+    print("Assessment updated.")
+ 
+ 
+def manage_assessments(conn, user):
+    while True:
+        print("\n--- Manage Assessments ---")
+        print("1) View assessments")
+        print("2) Add an assessment")
+        print("3) Edit an assessment")
+        print("4) Back to manager menu")
+        choice = prompt_choice("Choose an option", {"1", "2", "3", "4"})
+ 
+        if choice == "1":
+            view_assessments(conn, user)
+        elif choice == "2":
+            add_assessment(conn, user)
+        elif choice == "3":
+            edit_assessment(conn, user)
+        elif choice == "4":
+            return
+
+# ---------------------------------------------------------------------------
 # Competencies -- view / add / edit only. The requirements only list
 # "delete an assessment result" under Delete, so competencies don't get
 # a delete option here.
@@ -282,21 +397,7 @@ def view_competencies(conn, user):
         return
     for row in rows:
         print(f"  [{row['competency_id']}] {row['name']} (added {row['date_created']})")
-
-
-def choose_competency(conn):
-    """Show competencies and prompt for a valid competency_id. Returns the
-    id as a string, or None if there are no competencies to choose from."""
-    rows = list_competencies(conn)
-    if not rows:
-        print("No competencies exist yet -- add one first.")
-        return None
  
-    for row in rows:
-        print(f"  [{row['competency_id']}] {row['name']}")
-    valid_ids = {str(row["competency_id"]) for row in rows}
-    return prompt_choice("Enter the competency_id", valid_ids)
-
  
 def add_competency(conn, user):
     print("\n--- Add Competency ---")
@@ -354,11 +455,7 @@ def manage_competencies(conn, user):
             edit_competency(conn, user)
         elif choice == "4":
             return
-
-
-#
-#
-#
+ 
  
 def manager_menu(conn, user):
     while True:
@@ -409,7 +506,6 @@ def manager_menu(conn, user):
         elif choice == "13":
             print("Logging out...")
             return
- 
  
 # ---------------------------------------------------------------------------
 # App loop
