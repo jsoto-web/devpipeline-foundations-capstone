@@ -149,9 +149,9 @@ def edit_own_name(conn: Connection, user: Row) -> Row:
     return conn.execute("SELECT * FROM users WHERE user_id = ?", (user["user_id"],)).fetchone()
 
  
-def change_own_password(conn, user) -> None:
+def change_own_password(conn: Connection, user: Row) -> None:
     print("\n--- Change Password ---")
-    new_password = prompt("New password")
+    new_password = prompt_required("New password")
     confirm = prompt("Confirm new password")
  
     if new_password != confirm:
@@ -160,11 +160,12 @@ def change_own_password(conn, user) -> None:
  
     hashed = hash_password(new_password)
     conn.execute(
-                 "UPDATE users SET password = ? WHERE user_id = ?",
-                (hashed, user["user_id"]),
-                 )
+        "UPDATE users SET password = ? WHERE user_id = ?",
+        (hashed, user["user_id"]),
+    )
     conn.commit()
     print("Password updated.")
+
 
 def get_latest_result(conn, user_id, competency_id):
     """Most recent assessment_result for a given user + competency, or 
