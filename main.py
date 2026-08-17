@@ -8,12 +8,12 @@ Handles the login loop, then branches into a user menu or a manager
 menu based on users.user_type. 
 """
  
-from db import get_connection
-from auth import authenticate, create_user, hash_password
-
 import csv
 import sqlite3
 from datetime import date
+
+from auth import authenticate, create_user, hash_password
+from db import get_connection
 
 # ---------------------------------------------------------------------------
 # Small input helpers
