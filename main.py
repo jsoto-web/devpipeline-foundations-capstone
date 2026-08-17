@@ -11,10 +11,13 @@ menu based on users.user_type.
 import csv
 import sqlite3
 from datetime import date
-from typing import Any
+from typing import Any, Callable
 
 from auth import authenticate, create_user, hash_password
 from db import get_connection
+
+Connection = sqlite3.Connection
+Row = sqlite3.Row
 
 # ---------------------------------------------------------------------------
 # Small input helpers
@@ -24,12 +27,59 @@ def prompt(label: str) -> str:
     return input(f"{label}: ").strip()
  
  
-def prompt_choice(label: str, valid_choices) -> str:
+def prompt_choice(label: str, valid_choices: set[str]) -> str:
     while True:
         choice = prompt(label)
         if choice in valid_choices:
             return choice
         print(f"  Please enter one of: {', '.join(valid_choices)}")
+
+def prompt_required(label: str) -> str:
+    """Loop until the person enters something non-blank."""
+    while True:
+        value = prompt(label)
+        if value:
+            return value
+        print("    This field can't be blank.")
+
+def prompt_date(label: str, allow_blank: bool = False) -> str:
+    """Loop until the person enters a valid YYY-MM-DD date. If
+    allow_blank is True, an empty input is accepted and returned as empty-string."""
+    while True:
+        value = prompt(label)
+        if not value:
+            if allow_blank:
+                return ""
+            print("    This field can't be blank.")
+            continue
+        try:
+            date.fromisoformat(value)
+            return value
+        except ValueError:
+            print("    Please enter a date as YYYY-MM-DD, e.g. 2023-09-01.")
+
+def prompt_score_optional(label: str = "New score (0-4, blank to keep)") -> str:
+    """Loop until the person enters 0-4 or leaves it blank."""
+    while True:
+        value = prompt(label)
+        if not value:
+            return ""
+        if value in {"0", "1", "2", "3", "4"}:
+            return value
+        print("    Score must be 0-4 (or blank to keep the current value).")
+
+def safe_call(action: Callable[[Connection, Row], Any], conn: Connection, user: Row) -> Any:
+    """Run a menu action and catch anything unexpected so one bad action
+    can't take down the whole session. Returns whatever the action returns
+    (some actions, like edit_own_name, return an updated user row)."""
+    try:
+        return action(conn, user)
+    except sqlite3.Error as e:
+        print(f"\nDatabase error: {e}\nNothing was changed.")
+        return None
+    except Exception as e:
+        print(f"\nSomething went wrong: {e}\nReturning to the menu.")
+        return None
 
  
 # ---------------------------------------------------------------------------
@@ -72,7 +122,8 @@ def view_own_profile(conn, user) -> None:
     print(f"User type:   {user['user_type']}")
     print(f"Hire date:   {user['hire_date']}")
     print(f"Active:      {'Yes' if user['active'] else 'No'}")
- 
+
+def edit_own_name(conn, user)
  
 def change_own_password(conn, user) -> None:
     print("\n--- Change Password ---")
