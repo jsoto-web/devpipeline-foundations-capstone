@@ -127,7 +127,27 @@ def view_own_profile(conn: Connection, user: Row) -> None:
     print(f"Hire date:   {user['hire_date']}")
     print(f"Active:      {'Yes' if user['active'] else 'No'}")
 
-def edit_own_name(conn, user)
+def edit_own_name(conn: Connection, user: Row) -> Row:
+    print("\n--- Edit My Name ---")
+    print("Leave a field blank to keep its current value.")
+    new_first = prompt(f"First name [{user['first_name']}]")
+    new_last = prompt(f"Last name [{user['last_name']}]")
+ 
+    if not new_first and not new_last:
+        print("No changes made.")
+        return user
+ 
+    if new_first:
+        conn.execute("UPDATE users SET first_name = ? WHERE user_id = ?",
+                      (new_first, user["user_id"]))
+    if new_last:
+        conn.execute("UPDATE users SET last_name = ? WHERE user_id = ?",
+                      (new_last, user["user_id"]))
+    conn.commit()
+    print("Name updated.")
+ 
+    return conn.execute("SELECT * FROM users WHERE user_id = ?", (user["user_id"],)).fetchone()
+
  
 def change_own_password(conn, user) -> None:
     print("\n--- Change Password ---")
