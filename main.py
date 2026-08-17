@@ -86,7 +86,7 @@ def safe_call(action: Callable[[Connection, Row], Any], conn: Connection, user: 
 # Login
 # ---------------------------------------------------------------------------
  
-def login_screen(conn) -> Any | None:
+def login_screen(conn: Connection) -> Row | None:
     """Loop until a successful login or the person chooses to quit.
     Returns the logged-in user row, or None if they quit."""
     print("\n=== Competency Tracking Tool ===")
@@ -100,7 +100,11 @@ def login_screen(conn) -> Any | None:
  
         email = prompt("Email")
         password = prompt("Password")
-        user = authenticate(conn, email, password)
+        try:
+            user = authenticate(conn, email, password)
+        except:
+            print(f"Database error during login: {e}")
+            continue
  
         if user is None:
             print("Login failed. Check your email/password (or the account may be inactive).")
@@ -114,7 +118,7 @@ def login_screen(conn) -> Any | None:
 # Shared / "user" features -- both user_type='user' and 'manager' can do these
 # ---------------------------------------------------------------------------
  
-def view_own_profile(conn, user) -> None:
+def view_own_profile(conn: Connection, user: Row) -> None:
     print("\n--- Your Profile ---")
     print(f"Name:        {user['first_name']} {user['last_name']}")
     print(f"Email:       {user['email']}")
