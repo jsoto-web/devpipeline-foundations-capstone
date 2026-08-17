@@ -11,6 +11,7 @@ menu based on users.user_type.
 import csv
 import sqlite3
 from datetime import date
+from typing import Any
 
 from auth import authenticate, create_user, hash_password
 from db import get_connection
@@ -35,7 +36,7 @@ def prompt_choice(label: str, valid_choices) -> str:
 # Login
 # ---------------------------------------------------------------------------
  
-def login_screen(conn):
+def login_screen(conn) -> Any | None:
     """Loop until a successful login or the person chooses to quit.
     Returns the logged-in user row, or None if they quit."""
     print("\n=== Competency Tracking Tool ===")
@@ -63,7 +64,7 @@ def login_screen(conn):
 # Shared / "user" features -- both user_type='user' and 'manager' can do these
 # ---------------------------------------------------------------------------
  
-def view_own_profile(conn, user):
+def view_own_profile(conn, user) -> None:
     print("\n--- Your Profile ---")
     print(f"Name:        {user['first_name']} {user['last_name']}")
     print(f"Email:       {user['email']}")
@@ -73,7 +74,7 @@ def view_own_profile(conn, user):
     print(f"Active:      {'Yes' if user['active'] else 'No'}")
  
  
-def change_own_password(conn, user):
+def change_own_password(conn, user) -> None:
     print("\n--- Change Password ---")
     new_password = prompt("New password")
     confirm = prompt("Confirm new password")
@@ -84,9 +85,9 @@ def change_own_password(conn, user):
  
     hashed = hash_password(new_password)
     conn.execute(
-        "UPDATE users SET password = ? WHERE user_id = ?",
-        (hashed, user["user_id"]),
-    )
+                 "UPDATE users SET password = ? WHERE user_id = ?",
+                (hashed, user["user_id"]),
+                 )
     conn.commit()
     print("Password updated.")
 
