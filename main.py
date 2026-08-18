@@ -682,7 +682,7 @@ def edit_assessment_result(conn: Connection, user: Row) -> None:
         return
  
     valid_ids = {str(row["assessment_result_id"]) for row in rows}
-    result_id = prompt_choice("Enter the assessment_result_id to edit", valid_ids)
+    result_id = prompt_id_or_back("Enter the assessment_result_id to edit", valid_ids)
  
     print("Leave a field blank to keep its current value.")
     new_score = prompt_score_optional()
