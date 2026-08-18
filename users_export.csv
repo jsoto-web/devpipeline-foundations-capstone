@@ -1,0 +1,9 @@
+user_id,first_name,last_name,phone,email,active,date_created,hire_date,user_type
+6,Taylor,Brooks,555-0204,taylor.brooks@example.com,1,2026-08-18,2026-01-12,user
+3,Alex,Chen,555-0201,alex.chen@example.com,1,2026-08-18,2025-06-10,user
+7,Jordan,Kim,555-0205,jordan.kim@example.com,1,2026-08-18,2026-02-20,user
+8,Morgan,Lee,555-0206,morgan.lee@example.com,0,2026-08-18,2024-11-01,user
+1,Demo,Manager,555-0100,demo.manager@example.com,1,2026-08-07,2026-01-15,manager
+5,Sam,Okafor,555-0203,sam.okafor@example.com,1,2026-08-18,2025-09-05,user
+4,Priya,Patel,555-0202,priya.patel@example.com,1,2026-08-18,2025-07-22,user
+2,Jamie,Rivera,555-0101,jamie.rivera@example.com,1,2026-08-18,2025-03-01,manager
