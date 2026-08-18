@@ -973,7 +973,7 @@ def edit_competency(conn: Connection, user: Row) -> None:
         return
  
     valid_ids = {str(row["competency_id"]) for row in rows}
-    competency_id = prompt_choice("Enter the competency_id to edit", valid_ids)
+    competency_id = prompt_id_or_back("Enter the competency_id to edit", valid_ids)
  
     new_name = prompt("New name (leave blank to cancel)")
     if not new_name:
