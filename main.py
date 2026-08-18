@@ -683,6 +683,10 @@ def edit_assessment_result(conn: Connection, user: Row) -> None:
  
     valid_ids = {str(row["assessment_result_id"]) for row in rows}
     result_id = prompt_id_or_back("Enter the assessment_result_id to edit", valid_ids)
+
+    if result_id is None:
+        print("Cancelled.")
+        return
  
     print("Leave a field blank to keep its current value.")
     new_score = prompt_score_optional()
@@ -715,6 +719,10 @@ def delete_assessment_result(conn: Connection, user: Row) -> None:
  
     valid_ids = {str(row["assessment_result_id"]) for row in rows}
     result_id = prompt_id_or_back("Enter the assessment_result_id to delete", valid_ids)
+
+    if result_id is None:
+        print("Cancelled.")
+        return
  
     confirm = prompt_choice(f"Delete result {result_id}? This can't be undone. (y/n)", {"y", "n"})
     if confirm != "y":
