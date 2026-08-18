@@ -920,13 +920,14 @@ def csv_import_menu(conn: Connection, user: Row) -> None:
 # a delete option here.
 # ---------------------------------------------------------------------------
  
-def list_competencies(conn):
+
+def list_competencies(conn: Connection) -> list[Row]:
     return conn.execute(
         "SELECT competency_id, name, date_created FROM competencies ORDER BY name"
     ).fetchall()
  
  
-def view_competencies(conn, user):
+def view_competencies(conn: Connection, user: Row) -> None:
     print("\n--- Competencies ---")
     rows = list_competencies(conn)
     if not rows:
@@ -936,12 +937,9 @@ def view_competencies(conn, user):
         print(f"  [{row['competency_id']}] {row['name']} (added {row['date_created']})")
  
  
-def add_competency(conn, user):
+def add_competency(conn: Connection, user: Row) -> None:
     print("\n--- Add Competency ---")
-    name = prompt("Competency name")
-    if not name:
-        print("Name can't be blank. Nothing was added.")
-        return
+    name = prompt_required("Competency name")
  
     today = date.today().isoformat()
     cursor = conn.execute(
@@ -952,7 +950,7 @@ def add_competency(conn, user):
     print(f"Added competency_id={cursor.lastrowid} ({name}).")
  
  
-def edit_competency(conn, user):
+def edit_competency(conn: Connection, user: Row) -> None:
     print("\n--- Edit Competency ---")
     view_competencies(conn, user)
     rows = list_competencies(conn)
@@ -975,7 +973,7 @@ def edit_competency(conn, user):
     print("Competency updated.")
  
  
-def manage_competencies(conn, user):
+def manage_competencies(conn: Connection, user: Row) -> None:
     while True:
         print("\n--- Manage Competencies ---")
         print("1) View competencies")
@@ -985,62 +983,73 @@ def manage_competencies(conn, user):
         choice = prompt_choice("Choose an option", {"1", "2", "3", "4"})
  
         if choice == "1":
-            view_competencies(conn, user)
+            safe_call(view_competencies, conn, user)
         elif choice == "2":
-            add_competency(conn, user)
+            safe_call(add_competency, conn, user)
         elif choice == "3":
-            edit_competency(conn, user)
+            safe_call(edit_competency, conn, user)
         elif choice == "4":
             return
  
  
-def manager_menu(conn, user):
+def manager_menu(conn: Connection, user: Row) -> None:
     while True:
         print("\n--- Manager Menu ---")
         print("1) View my profile")
-        print("2) Change my password")
-        print("3) View all users")
-        print("4) Search users")
-        print("5) Add a user")
-        print("6) View a user's competency report")
-        print("7) Manage competencies")
-        print("8) Manage assessments")
-        print("9) Manage assessment results")
-        print("10) View competency results summary (all users)")
-        print("11) Export CSV")
-        print("12) Import CSV")
-        print("13) Log out")
+        print("2) Edit my name")
+        print("3) Change my password")
+        print("4) View all users")
+        print("5) Search users")
+        print("6) Add a user")
+        print("7) Edit a user")
+        print("8) View a user's competency report")
+        print("9) View a user's assessment history")
+        print("10) Manage competencies")
+        print("11) Manage assessments")
+        print("12) Manage assessment results")
+        print("13) View competency results summary (all users)")
+        print("14) Export CSV")
+        print("15) Import CSV")
+        print("16) Log out")
  
         choice = prompt_choice(
             "Choose an option",
-            {str(n) for n in range(1, 14)},
+            {str(n) for n in range(1, 17)},
         )
  
         if choice == "1":
-            view_own_profile(conn, user)
+            safe_call(view_own_profile, conn, user)
         elif choice == "2":
-            change_own_password(conn, user)
+            updated = safe_call(edit_own_name, conn, user)
+            if updated is not None:
+                user = updated
         elif choice == "3":
-            view_all_users(conn, user)
+            safe_call(change_own_password, conn, user)
         elif choice == "4":
-            search_users(conn, user)
+            safe_call(view_all_users, conn, user)
         elif choice == "5":
-            add_user(conn, user)
+            safe_call(search_users, conn, user)
         elif choice == "6":
-            view_user_competency_report(conn, user)
+            safe_call(add_user, conn, user)
         elif choice == "7":
-            manage_competencies(conn, user)
+            safe_call(edit_user, conn, user)
         elif choice == "8":
-            manage_assessments(conn, user)
+            safe_call(view_user_competency_report, conn, user)
         elif choice == "9":
-            manage_assessment_results(conn, user)
+            safe_call(view_assessments_for_user, conn, user)
         elif choice == "10":
-            view_competency_results_summary(conn, user)
+            manage_competencies(conn, user)
         elif choice == "11":
-            csv_export_menu(conn, user)
+            manage_assessments(conn, user)
         elif choice == "12":
-            csv_import_menu(conn, user)
+            manage_assessment_results(conn, user)
         elif choice == "13":
+            safe_call(view_competency_results_summary, conn, user)
+        elif choice == "14":
+            csv_export_menu(conn, user)
+        elif choice == "15":
+            safe_call(csv_import_menu, conn, user)
+        elif choice == "16":
             print("Logging out...")
             return
  
