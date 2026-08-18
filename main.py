@@ -1057,8 +1057,13 @@ def manager_menu(conn: Connection, user: Row) -> None:
 # App loop
 # ---------------------------------------------------------------------------
  
-def main():
-    conn = get_connection()
+def main() -> None:
+    try:
+        conn: Connection = get_connection()
+    except sqlite3.Error as e:
+        print(f"Could not connect to the database: {e}")
+        return
+ 
     try:
         while True:
             user = login_screen(conn)
@@ -1071,6 +1076,10 @@ def main():
             else:
                 user_menu(conn, user)
             # loop back to login_screen after logout
+    except (KeyboardInterrupt, EOFError):
+        print("\n\nGoodbye.")
+    except Exception as e:
+        print(f"\nAn unexpected error occurred and the app needs to close: {e}")
     finally:
         conn.close()
  
