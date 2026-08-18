@@ -502,7 +502,7 @@ def choose_competency(conn: Connection) -> str | None:
     for row in rows:
         print(f"  [{row['competency_id']}] {row['name']}")
     valid_ids = {str(row["competency_id"]) for row in rows}
-    return prompt_choice("Enter the competency_id", valid_ids)
+    return prompt_id_or_back("Enter the competency_id", valid_ids)
  
  
 def add_assessment(conn: Connection, user: Row) -> None:
