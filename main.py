@@ -624,7 +624,7 @@ def choose_user(conn: Connection, prompt_label: str = "Enter the user_id") -> st
     for row in rows:
         print(f"  [{row['user_id']}] {row['first_name']} {row['last_name']}")
     valid_ids = {str(row["user_id"]) for row in rows}
-    return prompt_choice(prompt_label, valid_ids)
+    return prompt_id_or_back(prompt_label, valid_ids)
  
  
 def choose_assessment(conn: Connection) -> str | None:
