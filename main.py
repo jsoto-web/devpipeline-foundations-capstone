@@ -205,7 +205,7 @@ def print_user_competency_summary(conn: Connection, target_user: Row) -> None:
     average = total / len(competencies)
     print(f"\nAverage competency score: {average:.2f}")
 
-def view_own_competency_summary(conn, user):
+def view_own_competency_summary(conn: Connection, user: Row) -> None:
     print_user_competency_summary(conn, user)
  
 def user_menu(conn, user):
