@@ -5,10 +5,11 @@ assessments. Built for the Coding Foundations Capstone Project.
 
 ## What it does
 
-Managers can add users, competencies, and assessments, record assessment
-results for employees, and pull competency reports across the team. Regular
-users can log in, view their own profile, and see their own competency
-summary. Passwords are hashed with bcrypt and never stored in plain text.
+Managers can add and edit users, competencies, and assessments, record
+assessment results for employees, and pull competency reports across the
+team. Regular users can log in, view and edit their own profile, and see
+their own competency summary. Passwords are hashed with bcrypt and never
+stored in plain text.
 
 ## Requirements
 
@@ -79,6 +80,7 @@ everyone after that.
 
 - Log in / log out
 - View your own profile (name, email, phone, hire date, active status)
+- Edit your own name
 - Change your own password
 - View your own competency summary -- your most recent score on every
   competency (0 if you've never been assessed on it), plus your average
@@ -87,7 +89,11 @@ everyone after that.
 
 - View all users, or search by first/last name
 - Add a user
+- Edit a user (name, phone, email, hire date, user type, active status --
+  this is also how you deactivate/reactivate an account)
 - View any individual user's competency report
+- View any individual user's raw assessment history (every assessment
+  they've taken, in order, distinct from the aggregated competency report)
 - Manage competencies -- view / add / edit
 - Manage assessments -- view / add / edit (each assessment belongs to one
   competency)
@@ -100,7 +106,39 @@ everyone after that.
 
 Note on delete: only assessment results can be deleted through the app.
 Competencies and assessments are view/add/edit only, per the project
-requirements.
+requirements. To remove a user's access without deleting their history,
+use "Edit a user" and set them to inactive instead.
+
+### Manager menu
+
+```
+1)  View my profile
+2)  Edit my name
+3)  Change my password
+4)  View all users
+5)  Search users
+6)  Add a user
+7)  Edit a user
+8)  View a user's competency report
+9)  View a user's assessment history
+10) Manage competencies
+11) Manage assessments
+12) Manage assessment results
+13) View competency results summary (all users)
+14) Export CSV
+15) Import CSV
+16) Log out
+```
+
+### User menu
+
+```
+1) View my profile
+2) Edit my name
+3) Change my password
+4) View my competency summary
+5) Log out
+```
 
 ## Competency scale
 
@@ -125,13 +163,15 @@ user_id,assessment_id,score,date_taken
 
 - `user_id` and `assessment_id` must reference existing rows
 - `score` must be an integer from 0-4
-- `date_taken` can't be blank
+- `date_taken` must be a valid date in `YYYY-MM-DD` format
 
-Rows that fail validation (bad foreign key, out-of-range score, missing
-date, etc.) are skipped and reported individually; valid rows in the same
-file still get imported. Imported results don't have a `manager_id`
-recorded, since there's no way to know who administered an assessment
-that happened outside the app.
+Rows that fail validation (bad foreign key, out-of-range score, malformed
+or missing date, etc.) are skipped and reported individually, with the row
+number and the reason; valid rows in the same file still get imported.
+Imported results don't have a `manager_id` recorded, since there's no way
+to know who administered an assessment that happened outside the app.
+
+A ready-to-use example is included: `sample_assessment_results.csv`.
 
 ## CSV export
 
@@ -143,6 +183,36 @@ row:
 - `user_<id>_competency_summary.csv`
 - `competency_<id>_results_summary.csv`
 
+## Error handling
+
+This is meant to run as production-quality Beta software, so it's built to
+degrade gracefully instead of crashing:
+
+- **Input validation at entry.** Required fields loop until you enter
+  something; dates loop until they're valid `YYYY-MM-DD`; scores are
+  restricted to menu choices or validated on free-text entry. Bad data
+  never reaches the database in the first place.
+- **Database errors are caught, not fatal.** A duplicate email (`UNIQUE`
+  constraint) or an out-of-range score (`CHECK` constraint) is reported in
+  plain language and returns you to the menu -- it doesn't crash the app or
+  print a raw SQLite traceback.
+- **Every menu action runs inside a safety net.** If something
+  unanticipated still goes wrong in a single action, the app reports it and
+  returns to the menu rather than ending your session.
+- **File I/O failures are handled.** A missing CSV file, a bad path, or a
+  permissions problem on export/import prints a clear message instead of
+  crashing.
+- **Nothing ends in a raw traceback.** Ctrl+C, Ctrl+D, or any other
+  unexpected error at the top level prints a friendly "Goodbye" and exits
+  cleanly.
+
+## Type hints
+
+Every function has type hints on its parameters and its return type, using
+Python 3.10+ union syntax (e.g. `str | None`) rather than `typing.Optional`.
+`sqlite3.Connection` and `sqlite3.Row` are aliased to `Connection` and `Row`
+at the top of `main.py` to keep signatures readable.
+
 ## Project files
 
 | File | Purpose |
@@ -152,6 +222,7 @@ row:
 | `db.py` | Shared SQLite connection helper |
 | `schema.py` | Creates the database and tables |
 | `competency_tracker.db` | The SQLite database file |
+| `sample_assessment_results.csv` | Example file for testing CSV import |
 | `ERD_final_draft.drawio` / `.pdf` | Entity-relationship diagram |
 
 ## Known limitations
