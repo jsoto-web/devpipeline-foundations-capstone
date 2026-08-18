@@ -208,22 +208,27 @@ def print_user_competency_summary(conn: Connection, target_user: Row) -> None:
 def view_own_competency_summary(conn: Connection, user: Row) -> None:
     print_user_competency_summary(conn, user)
  
-def user_menu(conn, user):
+def user_menu(conn: Connection, user: Row) -> None:
     while True:
         print("\n--- User Menu ---")
         print("1) View my profile")
-        print("2) Change my password")
-        print("3) View my competency summary")
-        print("4) Log out")
-        choice = prompt_choice("Choose an option", {"1", "2", "3", "4"})
+        print("2) Edit my name")
+        print("3) Change my password")
+        print("4) View my competency summary")
+        print("5) Log out")
+        choice = prompt_choice("Choose an option", {"1", "2", "3", "4", "5"})
  
         if choice == "1":
-            view_own_profile(conn, user)
+            safe_call(view_own_profile, conn, user)
         elif choice == "2":
-            change_own_password(conn, user)
+            updated = safe_call(edit_own_name, conn, user)
+            if updated is not None:
+                user = updated
         elif choice == "3":
-            view_own_competency_summary(conn, user)
+            safe_call(change_own_password, conn, user)
         elif choice == "4":
+            safe_call(view_own_competency_summary, conn, user)
+        elif choice == "5":
             print("Logging out...")
             return
 
