@@ -453,7 +453,7 @@ def view_competency_results_summary(conn: Connection, user: Row) -> None:
 # the spec's Delete list only mentions deleting an assessment result).
 # ---------------------------------------------------------------------------
  
-def list_assessments(conn):
+def list_assessments(conn: Connection) -> list[Row]:
     return conn.execute(
         """
         SELECT a.assessment_id, a.name, a.date_created,
@@ -465,7 +465,7 @@ def list_assessments(conn):
     ).fetchall()
  
  
-def view_assessments(conn, user):
+def view_assessments(conn: Connection, user: Row) -> None:
     print("\n--- Assessments ---")
     rows = list_assessments(conn)
     if not rows:
@@ -476,7 +476,7 @@ def view_assessments(conn, user):
               f"-- competency: {row['competency_name']} (added {row['date_created']})")
  
  
-def choose_competency(conn):
+def choose_competency(conn: Connection) -> str | None:
     """Show competencies and prompt for a valid competency_id. Returns the
     id as a string, or None if there are no competencies to choose from."""
     rows = list_competencies(conn)
@@ -490,16 +490,13 @@ def choose_competency(conn):
     return prompt_choice("Enter the competency_id", valid_ids)
  
  
-def add_assessment(conn, user):
+def add_assessment(conn: Connection, user: Row) -> None:
     print("\n--- Add Assessment ---")
     competency_id = choose_competency(conn)
     if competency_id is None:
         return
  
-    name = prompt("Assessment name")
-    if not name:
-        print("Name can't be blank. Nothing was added.")
-        return
+    name = prompt_required("Assessment name")
  
     today = date.today().isoformat()
     cursor = conn.execute(
@@ -510,7 +507,7 @@ def add_assessment(conn, user):
     print(f"Added assessment_id={cursor.lastrowid} ({name}).")
  
  
-def edit_assessment(conn, user):
+def edit_assessment(conn: Connection, user: Row) -> None:
     print("\n--- Edit Assessment ---")
     view_assessments(conn, user)
     rows = list_assessments(conn)
@@ -545,7 +542,7 @@ def edit_assessment(conn, user):
     print("Assessment updated.")
  
  
-def manage_assessments(conn, user):
+def manage_assessments(conn: Connection, user: Row) -> None:
     while True:
         print("\n--- Manage Assessments ---")
         print("1) View assessments")
@@ -555,15 +552,14 @@ def manage_assessments(conn, user):
         choice = prompt_choice("Choose an option", {"1", "2", "3", "4"})
  
         if choice == "1":
-            view_assessments(conn, user)
+            safe_call(view_assessments, conn, user)
         elif choice == "2":
-            add_assessment(conn, user)
+            safe_call(add_assessment, conn, user)
         elif choice == "3":
-            edit_assessment(conn, user)
+            safe_call(edit_assessment, conn, user)
         elif choice == "4":
             return
 
- 
 # ---------------------------------------------------------------------------
 # Assessment Results -- the one entity the spec explicitly allows deleting.
 # ---------------------------------------------------------------------------
