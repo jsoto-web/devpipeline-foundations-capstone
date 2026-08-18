@@ -564,7 +564,8 @@ def manage_assessments(conn: Connection, user: Row) -> None:
 # Assessment Results -- the one entity the spec explicitly allows deleting.
 # ---------------------------------------------------------------------------
  
-def list_assessment_results(conn):
+
+def list_assessment_results(conn: Connection) -> list[Row]:
     return conn.execute(
         """
         SELECT ar.assessment_result_id, ar.score, ar.date_taken,
@@ -580,7 +581,7 @@ def list_assessment_results(conn):
     ).fetchall()
  
  
-def view_assessment_results(conn, user):
+def view_assessment_results(conn: Connection, user: Row) -> None:
     print("\n--- Assessment Results ---")
     rows = list_assessment_results(conn)
     if not rows:
@@ -594,7 +595,7 @@ def view_assessment_results(conn, user):
               f"(recorded by {manager_str})")
  
  
-def choose_user(conn, prompt_label="Enter the user_id"):
+def choose_user(conn: Connection, prompt_label: str = "Enter the user_id") -> str | None:
     """Show all active users and prompt for a valid user_id. Returns the id
     as a string, or None if there are no active users."""
     rows = conn.execute(
@@ -611,7 +612,7 @@ def choose_user(conn, prompt_label="Enter the user_id"):
     return prompt_choice(prompt_label, valid_ids)
  
  
-def choose_assessment(conn):
+def choose_assessment(conn: Connection) -> str | None:
     """Show all assessments and prompt for a valid assessment_id. Returns
     the id as a string, or None if there are no assessments."""
     rows = list_assessments(conn)
@@ -629,7 +630,7 @@ def prompt_score() -> str:
     return prompt_choice("Score (0-4)", {"0", "1", "2", "3", "4"})
  
  
-def add_assessment_result(conn, user):
+def add_assessment_result(conn: Connection, user: Row) -> None:
     print("\n--- Add Assessment Result ---")
     target_user_id = choose_user(conn, "Enter the user_id being assessed")
     if target_user_id is None:
@@ -640,22 +641,25 @@ def add_assessment_result(conn, user):
         return
  
     score = prompt_score()
-    date_taken = prompt("Date taken (YYYY-MM-DD, blank for today)")
+    date_taken = prompt_date("Date taken (YYYY-MM-DD, blank for today)", allow_blank=True)
     if not date_taken:
         date_taken = date.today().isoformat()
  
-    cursor = conn.execute(
-        """
-        INSERT INTO assessment_results (user_id, assessment_id, manager_id, score, date_taken)
-        VALUES (?, ?, ?, ?, ?)
-        """,
-        (target_user_id, assessment_id, user["user_id"], score, date_taken),
-    )
-    conn.commit()
-    print(f"Added assessment_result_id={cursor.lastrowid}.")
+    try:
+        cursor = conn.execute(
+            """
+            INSERT INTO assessment_results (user_id, assessment_id, manager_id, score, date_taken)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (target_user_id, assessment_id, user["user_id"], score, date_taken),
+        )
+        conn.commit()
+        print(f"Added assessment_result_id={cursor.lastrowid}.")
+    except sqlite3.IntegrityError as e:
+        print(f"Could not add assessment result: {e}")
  
  
-def edit_assessment_result(conn, user):
+def edit_assessment_result(conn: Connection, user: Row) -> None:
     print("\n--- Edit Assessment Result ---")
     view_assessment_results(conn, user)
     rows = list_assessment_results(conn)
@@ -666,12 +670,8 @@ def edit_assessment_result(conn, user):
     result_id = prompt_choice("Enter the assessment_result_id to edit", valid_ids)
  
     print("Leave a field blank to keep its current value.")
-    new_score = prompt("New score (0-4)")
-    new_date = prompt("New date taken (YYYY-MM-DD)")
- 
-    if new_score and new_score not in {"0", "1", "2", "3", "4"}:
-        print("Score must be 0-4. No changes made.")
-        return
+    new_score = prompt_score_optional()
+    new_date = prompt_date("New date taken (YYYY-MM-DD)", allow_blank=True)
  
     if not new_score and not new_date:
         print("No changes made.")
@@ -691,7 +691,7 @@ def edit_assessment_result(conn, user):
     print("Assessment result updated.")
  
  
-def delete_assessment_result(conn, user):
+def delete_assessment_result(conn: Connection, user: Row) -> None:
     print("\n--- Delete Assessment Result ---")
     view_assessment_results(conn, user)
     rows = list_assessment_results(conn)
@@ -713,7 +713,7 @@ def delete_assessment_result(conn, user):
     print("Assessment result deleted.")
  
  
-def manage_assessment_results(conn, user):
+def manage_assessment_results(conn: Connection, user: Row) -> None:
     while True:
         print("\n--- Manage Assessment Results ---")
         print("1) View assessment results")
@@ -724,48 +724,56 @@ def manage_assessment_results(conn, user):
         choice = prompt_choice("Choose an option", {"1", "2", "3", "4", "5"})
  
         if choice == "1":
-            view_assessment_results(conn, user)
+            safe_call(view_assessment_results, conn, user)
         elif choice == "2":
-            add_assessment_result(conn, user)
+            safe_call(add_assessment_result, conn, user)
         elif choice == "3":
-            edit_assessment_result(conn, user)
+            safe_call(edit_assessment_result, conn, user)
         elif choice == "4":
-            delete_assessment_result(conn, user)
+            safe_call(delete_assessment_result, conn, user)
         elif choice == "5":
             return
  
  
-def export_users_csv(conn, user):
+def export_users_csv(conn: Connection, user: Row) -> None:
     filename = "users_export.csv"
     rows = conn.execute(
         "SELECT user_id, first_name, last_name, phone, email, active, "
         "date_created, hire_date, user_type FROM users ORDER BY last_name, first_name"
     ).fetchall()
  
-    with open(filename, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["user_id", "first_name", "last_name", "phone", "email",
-                          "active", "date_created", "hire_date", "user_type"])
-        for row in rows:
-            writer.writerow(list(row))
+    try:
+        with open(filename, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["user_id", "first_name", "last_name", "phone", "email",
+                              "active", "date_created", "hire_date", "user_type"])
+            for row in rows:
+                writer.writerow(list(row))
+    except OSError as e:
+        print(f"Could not write '{filename}': {e}")
+        return
  
     print(f"Exported {len(rows)} users to {filename}.")
  
  
-def export_competencies_csv(conn, user):
+def export_competencies_csv(conn: Connection, user: Row) -> None:
     filename = "competencies_export.csv"
     rows = list_competencies(conn)
  
-    with open(filename, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["competency_id", "name", "date_created"])
-        for row in rows:
-            writer.writerow(list(row))
+    try:
+        with open(filename, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["competency_id", "name", "date_created"])
+            for row in rows:
+                writer.writerow(list(row))
+    except OSError as e:
+        print(f"Could not write '{filename}': {e}")
+        return
  
     print(f"Exported {len(rows)} competencies to {filename}.")
  
  
-def export_user_competency_summary_csv(conn, user):
+def export_user_competency_summary_csv(conn: Connection, user: Row) -> None:
     print("\n--- Export User Competency Summary ---")
     target_user_id = choose_user(conn)
     if target_user_id is None:
@@ -777,22 +785,26 @@ def export_user_competency_summary_csv(conn, user):
     competencies = list_competencies(conn)
     filename = f"user_{target_user_id}_competency_summary.csv"
  
-    with open(filename, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["competency_name", "score"])
-        total = 0
-        for c in competencies:
-            latest = get_latest_result(conn, target_user_id, c["competency_id"])
-            score = latest["score"] if latest else 0
-            total += score
-            writer.writerow([c["name"], score])
-        average = total / len(competencies) if competencies else 0
-        writer.writerow(["AVERAGE", f"{average:.2f}"])
+    try:
+        with open(filename, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["competency_name", "score"])
+            total = 0
+            for c in competencies:
+                latest = get_latest_result(conn, target_user_id, c["competency_id"])
+                score = latest["score"] if latest else 0
+                total += score
+                writer.writerow([c["name"], score])
+            average = total / len(competencies) if competencies else 0
+            writer.writerow(["AVERAGE", f"{average:.2f}"])
+    except OSError as e:
+        print(f"Could not write '{filename}': {e}")
+        return
  
     print(f"Exported summary for {target_user['first_name']} {target_user['last_name']} to {filename}.")
  
  
-def export_competency_results_summary_csv(conn, user):
+def export_competency_results_summary_csv(conn: Connection, user: Row) -> None:
     print("\n--- Export Competency Results Summary ---")
     competency_id = choose_competency(conn)
     if competency_id is None:
@@ -806,24 +818,28 @@ def export_competency_results_summary_csv(conn, user):
     ).fetchall()
     filename = f"competency_{competency_id}_results_summary.csv"
  
-    with open(filename, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["user_name", "competency_score", "assessment", "date_taken"])
-        total = 0
-        for u in active_users:
-            latest = get_latest_result(conn, u["user_id"], competency_id)
-            score = latest["score"] if latest else 0
-            assessment_name = latest["assessment_name"] if latest else ""
-            date_taken = latest["date_taken"] if latest else ""
-            total += score
-            writer.writerow([f"{u['first_name']} {u['last_name']}", score, assessment_name, date_taken])
-        average = total / len(active_users) if active_users else 0
-        writer.writerow(["AVERAGE", f"{average:.2f}", "", ""])
+    try:
+        with open(filename, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["user_name", "competency_score", "assessment", "date_taken"])
+            total = 0
+            for u in active_users:
+                latest = get_latest_result(conn, u["user_id"], competency_id)
+                score = latest["score"] if latest else 0
+                assessment_name = latest["assessment_name"] if latest else ""
+                date_taken = latest["date_taken"] if latest else ""
+                total += score
+                writer.writerow([f"{u['first_name']} {u['last_name']}", score, assessment_name, date_taken])
+            average = total / len(active_users) if active_users else 0
+            writer.writerow(["AVERAGE", f"{average:.2f}", "", ""])
+    except OSError as e:
+        print(f"Could not write '{filename}': {e}")
+        return
  
     print(f"Exported results summary for {competency['name']} to {filename}.")
  
  
-def csv_export_menu(conn, user):
+def csv_export_menu(conn: Connection, user: Row) -> None:
     while True:
         print("\n--- CSV Export ---")
         print("1) Export Users list")
@@ -834,18 +850,18 @@ def csv_export_menu(conn, user):
         choice = prompt_choice("Choose an option", {"1", "2", "3", "4", "5"})
  
         if choice == "1":
-            export_users_csv(conn, user)
+            safe_call(export_users_csv, conn, user)
         elif choice == "2":
-            export_competencies_csv(conn, user)
+            safe_call(export_competencies_csv, conn, user)
         elif choice == "3":
-            export_user_competency_summary_csv(conn, user)
+            safe_call(export_user_competency_summary_csv, conn, user)
         elif choice == "4":
-            export_competency_results_summary_csv(conn, user)
+            safe_call(export_competency_results_summary_csv, conn, user)
         elif choice == "5":
             return
  
  
-def import_assessment_results_csv(conn, user):
+def import_assessment_results_csv(conn: Connection, user: Row) -> None:
     print("\n--- Import Assessment Results from CSV ---")
     filename = prompt("CSV filename (e.g. results.csv)")
  
@@ -853,9 +869,12 @@ def import_assessment_results_csv(conn, user):
  
     try:
         f = open(filename, newline="")
-    except FileNotFoundError:
-        print(f"Couldn't find '{filename}'. Check the path and try again.")
+    except OSError as e:
+        print(f"Couldn't open '{filename}': {e}")
         return
+ 
+    imported = 0
+    skipped = 0
  
     with f:
         reader = csv.DictReader(f)
@@ -864,8 +883,6 @@ def import_assessment_results_csv(conn, user):
             print(f"CSV is missing required columns. Expected at least: {', '.join(sorted(required_columns))}")
             return
  
-        imported = 0
-        skipped = 0
         for row_num, row in enumerate(reader, start=2):  # row 1 is the header
             try:
                 user_id = int(row["user_id"])
@@ -875,8 +892,7 @@ def import_assessment_results_csv(conn, user):
  
                 if not (0 <= score <= 4):
                     raise ValueError(f"score {score} out of range 0-4")
-                if not date_taken:
-                    raise ValueError("date_taken is blank")
+                date.fromisoformat(date_taken)  # raises ValueError if malformed/blank
  
                 conn.execute(
                     """
@@ -894,8 +910,8 @@ def import_assessment_results_csv(conn, user):
     print(f"\nImport complete: {imported} row(s) imported, {skipped} row(s) skipped.")
  
  
-def csv_import_menu(conn, user):
-    import_assessment_results_csv(conn, user)
+def csv_import_menu(conn: Connection, user: Row) -> None:
+    safe_call(import_assessment_results_csv, conn, user)
 
 
 # ---------------------------------------------------------------------------
