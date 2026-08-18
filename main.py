@@ -34,6 +34,19 @@ def prompt_choice(label: str, valid_choices: set[str]) -> str:
             return choice
         print(f"  Please enter one of: {', '.join(valid_choices)}")
 
+
+def prompt_id_or_back(label: str, valid_ids: set[str]) -> str | None:
+    """Prompt for one of valid_ids, or 'b' to cancel and go back.
+    Returns None if the person backs out instead of choosing an id."""
+    while True:
+        choice = prompt(f"{label} (or 'b' to go back)")
+        if choice.lower() == "b":
+            return None
+        if choice in valid_ids:
+            return choice
+        print(f"  Please enter one of: {', '.join(sorted(valid_ids))}, or 'b' to go back")
+
+
 def prompt_required(label: str) -> str:
     """Loop until the person enters something non-blank."""
     while True:
