@@ -238,7 +238,8 @@ def user_menu(conn: Connection, user: Row) -> None:
 # Manager-only features
 # ---------------------------------------------------------------------------
  
-def view_all_users(conn, user):
+
+def view_all_users(conn: Connection, user: Row) -> None:
     print("\n--- All Users ---")
     rows = conn.execute(
         "SELECT user_id, first_name, last_name, email, user_type, active "
@@ -255,7 +256,7 @@ def view_all_users(conn, user):
               f"<{row['email']}> - {row['user_type']} ({status})")
  
  
-def search_users(conn, user):
+def search_users(conn: Connection, user: Row) -> None:
     print("\n--- Search Users ---")
     term = prompt("Search by first or last name")
     like_term = f"%{term}%"
@@ -276,14 +277,14 @@ def search_users(conn, user):
               f"<{row['email']}> - {row['user_type']} ({status})")
  
  
-def add_user(conn, user):
+def add_user(conn: Connection, user: Row) -> None:
     print("\n--- Add User ---")
-    first_name = prompt("First name")
-    last_name = prompt("Last name")
-    phone = prompt("Phone")
-    email = prompt("Email")
-    password = prompt("Temporary password")
-    hire_date = prompt("Hire date (YYYY-MM-DD)")
+    first_name = prompt_required("First name")
+    last_name = prompt_required("Last name")
+    phone = prompt_required("Phone")
+    email = prompt_required("Email")
+    password = prompt_required("Temporary password")
+    hire_date = prompt_date("Hire date (YYYY-MM-DD)")
     user_type = prompt_choice("User type (user/manager)", {"user", "manager"})
  
     try:
@@ -291,11 +292,113 @@ def add_user(conn, user):
             conn, first_name, last_name, phone, email, password, hire_date, user_type
         )
         print(f"Created user_id={new_id}.")
-    except Exception as e:
-        print(f"Could not create user: {e}")
-
+    except sqlite3.IntegrityError as e:
+        print(f"Could not create user (likely a duplicate email): {e}")
  
-def view_user_competency_report(conn, user):
+ 
+def list_assessment_results_for_user(conn: Connection, user_id: int | str) -> list[Row]:
+    return conn.execute(
+        """
+        SELECT ar.assessment_result_id, ar.score, ar.date_taken,
+               a.name AS assessment_name, c.name AS competency_name,
+               m.first_name AS manager_first_name, m.last_name AS manager_last_name
+        FROM assessment_results ar
+        JOIN assessments a ON ar.assessment_id = a.assessment_id
+        JOIN competencies c ON a.competency_id = c.competency_id
+        LEFT JOIN users m ON ar.manager_id = m.user_id
+        WHERE ar.user_id = ?
+        ORDER BY ar.date_taken DESC, ar.assessment_result_id DESC
+        """,
+        (user_id,),
+    ).fetchall()
+ 
+ 
+def view_assessments_for_user(conn: Connection, user: Row) -> None:
+    print("\n--- View a User's Assessment History ---")
+    target_id = choose_user(conn)
+    if target_id is None:
+        return
+    target = conn.execute("SELECT * FROM users WHERE user_id = ?", (target_id,)).fetchone()
+ 
+    rows = list_assessment_results_for_user(conn, target_id)
+    print(f"\n--- Assessments taken by {target['first_name']} {target['last_name']} ---")
+    if not rows:
+        print("No assessments taken yet.")
+        return
+ 
+    for row in rows:
+        manager_str = (f"{row['manager_first_name']} {row['manager_last_name']}"
+                        if row["manager_first_name"] else "none")
+        print(f"  [{row['assessment_result_id']}] {row['assessment_name']} "
+              f"({row['competency_name']}): score {row['score']} on {row['date_taken']} "
+              f"(recorded by {manager_str})")
+ 
+ 
+def choose_any_user(conn: Connection, prompt_label: str = "Enter the user_id") -> str | None:
+    """Like choose_user, but includes inactive accounts too -- needed for
+    editing, since reactivating someone is part of editing their info."""
+    rows = conn.execute(
+        "SELECT user_id, first_name, last_name, active FROM users "
+        "ORDER BY last_name, first_name"
+    ).fetchall()
+    if not rows:
+        print("No users exist.")
+        return None
+ 
+    for row in rows:
+        status = "active" if row["active"] else "inactive"
+        print(f"  [{row['user_id']}] {row['first_name']} {row['last_name']} ({status})")
+    valid_ids = {str(row["user_id"]) for row in rows}
+    return prompt_choice(prompt_label, valid_ids)
+ 
+ 
+def edit_user(conn: Connection, user: Row) -> None:
+    print("\n--- Edit a User ---")
+    target_id = choose_any_user(conn, "Enter the user_id to edit")
+    if target_id is None:
+        return
+ 
+    target = conn.execute("SELECT * FROM users WHERE user_id = ?", (target_id,)).fetchone()
+ 
+    print(f"\nEditing {target['first_name']} {target['last_name']}.")
+    print("Leave a field blank to keep its current value.")
+ 
+    fields: dict[str, str] = {
+        "first_name": prompt(f"First name [{target['first_name']}]"),
+        "last_name": prompt(f"Last name [{target['last_name']}]"),
+        "phone": prompt(f"Phone [{target['phone']}]"),
+        "email": prompt(f"Email [{target['email']}]"),
+        "hire_date": prompt_date(f"Hire date [{target['hire_date']}]", allow_blank=True),
+    }
+ 
+    change_type = prompt_choice("Change user type? (y/n)", {"y", "n"})
+    if change_type == "y":
+        fields["user_type"] = prompt_choice("New user type (user/manager)", {"user", "manager"})
+ 
+    change_active = prompt_choice(
+        f"Change active status? Currently {'active' if target['active'] else 'inactive'}. (y/n)",
+        {"y", "n"},
+    )
+    if change_active == "y":
+        fields["active"] = prompt_choice("Set active? (1=active, 0=inactive)", {"0", "1"})
+ 
+    updates = {k: v for k, v in fields.items() if v}
+    if not updates:
+        print("No changes made.")
+        return
+ 
+    set_clause = ", ".join(f"{col} = ?" for col in updates)
+    values = list(updates.values()) + [target_id]
+ 
+    try:
+        conn.execute(f"UPDATE users SET {set_clause} WHERE user_id = ?", values)
+        conn.commit()
+        print("User updated.")
+    except sqlite3.IntegrityError as e:
+        print(f"Could not update user (likely a duplicate email): {e}")
+ 
+ 
+def view_user_competency_report(conn: Connection, user: Row) -> None:
     print("\n--- View a User's Competency Report ---")
     target_user_id = choose_user(conn)
     if target_user_id is None:
@@ -306,7 +409,7 @@ def view_user_competency_report(conn, user):
     print_user_competency_summary(conn, target_user)
  
  
-def print_competency_results_summary(conn, competency):
+def print_competency_results_summary(conn: Connection, competency: Row) -> None:
     """The 'Competency Results Summary' report for a single competency:
     every active user's most recent score on it (0 if never assessed),
     plus a simple average across active users."""
@@ -333,7 +436,7 @@ def print_competency_results_summary(conn, competency):
     print(f"\nAverage score across active users: {average:.2f}")
  
  
-def view_competency_results_summary(conn, user):
+def view_competency_results_summary(conn: Connection, user: Row) -> None:
     print("\n--- Competency Results Summary ---")
     competency_id = choose_competency(conn)
     if competency_id is None:
@@ -342,6 +445,8 @@ def view_competency_results_summary(conn, user):
         "SELECT * FROM competencies WHERE competency_id = ?", (competency_id,)
     ).fetchone()
     print_competency_results_summary(conn, competency)
+ 
+
 
 # ---------------------------------------------------------------------------
 # Assessments -- view / add / edit only (same reasoning as competencies:
