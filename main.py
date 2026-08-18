@@ -86,6 +86,7 @@ def safe_call(action: Callable[[Connection, Row], Any], conn: Connection, user: 
 # Login
 # ---------------------------------------------------------------------------
  
+
 def login_screen(conn: Connection) -> Row | None:
     """Loop until a successful login or the person chooses to quit.
     Returns the logged-in user row, or None if they quit."""
@@ -100,9 +101,10 @@ def login_screen(conn: Connection) -> Row | None:
  
         email = prompt("Email")
         password = prompt("Password")
+ 
         try:
             user = authenticate(conn, email, password)
-        except:
+        except sqlite3.Error as e:
             print(f"Database error during login: {e}")
             continue
  
@@ -112,7 +114,7 @@ def login_screen(conn: Connection) -> Row | None:
  
         print(f"\nWelcome, {user['first_name']} {user['last_name']}!")
         return user
-
+ 
 
 # ---------------------------------------------------------------------------
 # Shared / "user" features -- both user_type='user' and 'manager' can do these
