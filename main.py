@@ -183,7 +183,7 @@ def get_latest_result(conn: Connection, user_id: int | str, competency_id: int |
     ).fetchone()
 
 
-def print_user_competency_summary(conn, target_user):
+def print_user_competency_summary(conn: Connection, target_user: Row) -> None:
     """The 'User Competency Summary' report for a single user: their
     most recent score per competency (0 if never assessed), plus a
     simple average across all competencies."""
@@ -204,7 +204,6 @@ def print_user_competency_summary(conn, target_user):
  
     average = total / len(competencies)
     print(f"\nAverage competency score: {average:.2f}")
-
 
 def view_own_competency_summary(conn, user):
     print_user_competency_summary(conn, user)
