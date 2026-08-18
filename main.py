@@ -364,7 +364,7 @@ def choose_any_user(conn: Connection, prompt_label: str = "Enter the user_id") -
         status = "active" if row["active"] else "inactive"
         print(f"  [{row['user_id']}] {row['first_name']} {row['last_name']} ({status})")
     valid_ids = {str(row["user_id"]) for row in rows}
-    return prompt_choice(prompt_label, valid_ids)
+    return prompt_id_or_back(prompt_label, valid_ids)
  
  
 def edit_user(conn: Connection, user: Row) -> None:
