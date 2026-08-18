@@ -167,19 +167,19 @@ def change_own_password(conn: Connection, user: Row) -> None:
     print("Password updated.")
 
 
-def get_latest_result(conn, user_id, competency_id):
-    """Most recent assessment_result for a given user + competency, or 
+def get_latest_result(conn: Connection, user_id: int | str, competency_id: int | str) -> Row | None:
+    """Most recent assessment_result for a given user + competency, or
     None if that user has never been assessed on that competency."""
     return conn.execute(
-                        """
-                        SELECT ar.score, asmt.name AS assessment_name, ar.date_taken
-                        FROM assessment_results ar
-                        JOIN assessments asmt ON ar.assessment_id = asmt.assessment_id
-                        WHERE ar.user_id = ? AND asmt.competency_id = ?
-                        ORDER BY ar.date_taken DESC, ar.assessment_result_id DESC
-                        LIMIT 1
-                        """,
-                        (user_id, competency_id),
+        """
+        SELECT ar.score, a.name AS assessment_name, ar.date_taken
+        FROM assessment_results ar
+        JOIN assessments a ON ar.assessment_id = a.assessment_id
+        WHERE ar.user_id = ? AND a.competency_id = ?
+        ORDER BY ar.date_taken DESC, ar.assessment_result_id DESC
+        LIMIT 1
+        """,
+        (user_id, competency_id),
     ).fetchone()
 
 
