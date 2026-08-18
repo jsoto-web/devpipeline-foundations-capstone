@@ -530,7 +530,7 @@ def edit_assessment(conn: Connection, user: Row) -> None:
         return
  
     valid_ids = {str(row["assessment_id"]) for row in rows}
-    assessment_id = prompt_choice("Enter the assessment_id to edit", valid_ids)
+    assessment_id = prompt_id_or_back("Enter the assessment_id to edit", valid_ids)
  
     print("Leave the name blank to keep it unchanged.")
     new_name = prompt("New name")
