@@ -638,7 +638,7 @@ def choose_assessment(conn: Connection) -> str | None:
     for row in rows:
         print(f"  [{row['assessment_id']}] {row['name']} ({row['competency_name']})")
     valid_ids = {str(row["assessment_id"]) for row in rows}
-    return prompt_choice("Enter the assessment_id", valid_ids)
+    return prompt_id_or_back("Enter the assessment_id", valid_ids)
  
  
 def prompt_score() -> str:
